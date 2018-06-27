@@ -31,6 +31,7 @@ function Paddle:init(x, y, width, height)
     self.y = y
     self.width = width
     self.height = height
+    self.dx = 0
     self.dy = 0
 end
 
@@ -47,6 +48,12 @@ function Paddle:update(dt)
     -- based on its top left corner)
     else
         self.y = math.min(VIRTUAL_HEIGHT - self.height, self.y + self.dy * dt)
+    end
+    
+    if self.dx < 0 then
+        self.x = math.max(0, self.x + self.dx * dt)
+    else
+        self.x = math.min(VIRTUAL_WIDTH - self.width, self.x + self.dx * dt)
     end
 end
 

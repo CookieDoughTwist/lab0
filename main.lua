@@ -91,8 +91,10 @@ function love.load()
 
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    player1 = Paddle(10, 30, 5, 20)
-    player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20)
+    player1_left = Paddle(10, 30, 5, 20)
+    player2_top = Paddle(30, 10, 20, 5)
+    player1_right = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20)
+    player2_bot = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 10, 20, 5)
 
     -- place a ball in the middle of the screen
     ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 4, 4)
@@ -149,9 +151,9 @@ function love.update(dt)
         -- detect ball collision with paddles, reversing dx if true and
         -- slightly increasing it, then altering the dy based on the position
         -- at which it collided, then playing a sound effect
-        if ball:collides(player1) then
+        if ball:collides(player1_left) then
             ball.dx = -ball.dx * 1.03
-            ball.x = player1.x + 5
+            ball.x = player1_left.x + 5
 
             -- keep velocity going in the same direction, but randomize it
             if ball.dy < 0 then
@@ -162,9 +164,22 @@ function love.update(dt)
 
             sounds['paddle_hit']:play()
         end
-        if ball:collides(player2) then
+        if ball:collides(player2_top) then
+            ball.dy = -ball.dy * 1.03
+            ball.y = player2_top.y + 5
+
+            -- keep velocity going in the same direction, but randomize it
+            if ball.dx < 0 then
+                ball.dx = -math.random(10, 150)
+            else
+                ball.dx = math.random(10, 150)
+            end
+
+            sounds['paddle_hit']:play()
+        end
+        if ball:collides(player1_right) then
             ball.dx = -ball.dx * 1.03
-            ball.x = player2.x - 4
+            ball.x = player1_right.x - 4
 
             -- keep velocity going in the same direction, but randomize it
             if ball.dy < 0 then
@@ -176,19 +191,49 @@ function love.update(dt)
             sounds['paddle_hit']:play()
         end
 
+        if ball:collides(player2_bot) then
+            ball.dy = -ball.dy * 1.03
+            ball.y = player2_bot.y - 4
+
+            -- keep velocity going in the same direction, but randomize it
+            if ball.dx < 0 then
+                ball.dx = -math.random(10, 150)
+            else
+                ball.dx = math.random(10, 150)
+            end
+
+            sounds['paddle_hit']:play()
+        end
+        
         -- detect upper and lower screen boundary collision, playing a sound
         -- effect and reversing dy if true
         if ball.y <= 0 then
-            ball.y = 0
-            ball.dy = -ball.dy
-            sounds['wall_hit']:play()
+            servingPlayer = 2
+            player1Score = player1Score + 1
+            sounds['score']:play()
+
+            if player1Score == 10 then
+                winningPlayer = 1
+                gameState = 'done'
+            else
+                gameState = 'serve'
+                ball:reset()
+            end
         end
 
         -- -4 to account for the ball's size
         if ball.y >= VIRTUAL_HEIGHT - 4 then
-            ball.y = VIRTUAL_HEIGHT - 4
-            ball.dy = -ball.dy
-            sounds['wall_hit']:play()
+            servingPlayer = 2
+            player1Score = player1Score + 1
+            sounds['score']:play()
+
+            if player1Score == 10 then
+                winningPlayer = 1
+                gameState = 'done'
+            else
+                gameState = 'serve'
+                ball:reset()
+            end
         end
 
         -- if we reach the left or right edge of the screen, go back to serve
@@ -211,15 +256,18 @@ function love.update(dt)
         end
 
         if ball.x > VIRTUAL_WIDTH then
-            servingPlayer = 2
-            player1Score = player1Score + 1
+            servingPlayer = 1
+            player2Score = player2Score + 1
             sounds['score']:play()
 
-            if player1Score == 10 then
-                winningPlayer = 1
+            -- if we've reached a score of 10, the game is over; set the
+            -- state to done so we can show the victory message
+            if player2Score == 10 then
+                winningPlayer = 2
                 gameState = 'done'
             else
                 gameState = 'serve'
+                -- places the ball in the middle of the screen, no velocity
                 ball:reset()
             end
         end
@@ -229,31 +277,49 @@ function love.update(dt)
     -- paddles can move no matter what state we're in
     --
     -- player 1
-    if love.keyboard.isDown('w') then
-        player1.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('s') then
-        player1.dy = PADDLE_SPEED
+    if love.keyboard.isDown('a') then
+        player1_left.dy = -PADDLE_SPEED
+    elseif love.keyboard.isDown('z') then
+        player1_left.dy = PADDLE_SPEED
     else
-        player1.dy = 0
+        player1_left.dy = 0
     end
+    if love.keyboard.isDown('s') then
+        player1_right.dy = -PADDLE_SPEED
+    elseif love.keyboard.isDown('x') then
+        player1_right.dy = PADDLE_SPEED
+    else
+        player1_right.dy = 0
+    end
+    
 
     -- player 2
-    if love.keyboard.isDown('up') then
-        player2.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('down') then
-        player2.dy = PADDLE_SPEED
+    if love.keyboard.isDown('l') then
+        player2_top.dx = -PADDLE_SPEED
+    elseif love.keyboard.isDown('\'') then
+        player2_top.dx = PADDLE_SPEED
     else
-        player2.dy = 0
+        player2_top.dx = 0
     end
-
+    
+    if love.keyboard.isDown(',') then
+        player2_bot.dx = -PADDLE_SPEED
+    elseif love.keyboard.isDown('/') then
+        player2_bot.dx = PADDLE_SPEED
+    else
+        player2_bot.dx = 0
+    end    
+    
     -- update our ball based on its DX and DY only if we're in play state;
     -- scale the velocity by dt so movement is framerate-independent
     if gameState == 'play' then
         ball:update(dt)
     end
 
-    player1:update(dt)
-    player2:update(dt)
+    player1_left:update(dt)
+    player2_top:update(dt)
+    player1_right:update(dt)
+    player2_bot:update(dt)
 end
 
 --[[
@@ -331,8 +397,10 @@ function love.draw()
     -- show the score before ball is rendered so it can move over the text
     displayScore()
     
-    player1:render()
-    player2:render()
+    player1_left:render()
+    player2_top:render()
+    player1_right:render()
+    player2_bot:render()
     ball:render()
 
     -- display FPS for debugging; simply comment out to remove
